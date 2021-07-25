@@ -132,7 +132,18 @@ export function InitPTT (messageposter) {
       { reg: /【網路遊樂場】/, input: 'e' },
       { reg: /您確定要離開【 批踢踢實業坊 】嗎\(Y\/N\)？/, input: 'n\n' }
 
-    ]
+    ],
+    serverResponse: {
+      isResponded: false,
+      cb: undefined,
+      set isRespondedFromPtt (val) {
+        this.isResponded = val
+        if (typeof this.cb === 'function' && this.isResponded === true) this.cb()
+      },
+      get isRespondedFromPtt () {
+        return this.isResponded
+      }
+    }
   }
   PTT.wind = window
   let PTTPost = {
@@ -166,17 +177,22 @@ export function InitPTT (messageposter) {
     }
   }
   let serverfull = false
-  const insertText = (() => {
-    let t = PTT.wind.document.querySelector('#t')
-    return str => {
-      if (!t) t = PTT.wind.document.querySelector('#t')
+  const insertText = str => {
+    if (!str) return
+    const promise = new Promise((resolve, reject) => {
+      PTT.serverResponse.cb = resolve
+      PTT.serverResponse.isResponded = false
       const e = new CustomEvent('paste')
-      // debug用
-      if (reportmode) console.log('insertText : "' + str + '"')
       e.clipboardData = { getData: () => str }
-      t.dispatchEvent(e)
-    }
-  })()
+      document.querySelector('#t').dispatchEvent(e)
+      if (reportmode) console.log(`insertText: "${str}"`)
+      setTimeout(reject, 3000)
+    })
+    promise.catch(() => {
+      PTT.unlock()
+      console.error(`PTT No Response! Last Inserted Text: "${str}"`)
+    })
+  }
   function ComLog (cmd) {
     if (showcommand) console.log('==execute command:', [cmd])
   }
@@ -248,14 +264,11 @@ export function InitPTT (messageposter) {
     }
   }
   hook(unsafeWindow.console, 'log', t => {
-    if (typeof t === 'string') {
-      if (t.indexOf('page state:') >= 0) {
-        /* const newstate = /->(\d)/.exec(t)[1]; */
-      } else if (t === 'view update') {
-        PTT.lastviewupdate = Date.now()
-        serverfull = false
-        OnUpdate()
-      }
+    if (t === 'view update') {
+      PTT.serverResponse.isRespondedFromPtt = true
+      PTT.lastviewupdate = Date.now()
+      serverfull = false
+      OnUpdate()
     }
   })
   // hook end
