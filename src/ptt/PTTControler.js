@@ -1,7 +1,10 @@
 import { PTTStatus } from './PTT.js'
-export class PTTControler extends PTTStatus {
-  constructor () {
-    super()
+export class PTTControler {
+  /**
+   * @param {PTTStatus} pttStatus 
+   */
+  constructor(pttStatus) {
+    this.pttStatus = pttStatus
     this.controlState = 0
     this.commandList = []
     this.autoCommands = [
@@ -71,7 +74,7 @@ export class PTTControler extends PTTStatus {
     const commands = this.autoCommands
     for (let i = 0; i < commands.length; i++) {
       const cmd = commands[i]
-      const result = this.screenHasText(cmd.reg)
+      const result = this.pttStatus.screenHasText(cmd.reg)
       if (result) {
         this.insertText(cmd.input)
         return true
@@ -83,7 +86,7 @@ export class PTTControler extends PTTStatus {
   execCommands () {
     const cmd = this.commandList.shift()
     console.log(`execCommands: "${cmd}"`)
-    if (cmd && this.screenHasText(cmd.reg)) {
+    if (cmd && this.pttStatus.screenHasText(cmd.reg)) {
       this.insertText(cmd.input)
       if (cmd.callback) {
         const args = cmd.args ? cmd.args : []
@@ -94,7 +97,7 @@ export class PTTControler extends PTTStatus {
 
   update () {
     console.log('update')
-    this.updatePttState()
+    this.pttStatus.updatePttState()
     if (!this.checkAutoCommands()) this.execCommands()
   }
 
@@ -109,7 +112,7 @@ export class PTTControler extends PTTStatus {
   loginPtt (id, pwd) {
     console.log('loginPtt')
     if (!this.login) {
-      const result = this.screenHasText(/請輸入代號，或以 guest 參觀，或以 new 註冊/)
+      const result = this.pttStatus.screenHasText(/請輸入代號，或以 guest 參觀，或以 new 註冊/)
       if (result) {
         this.insertText(id + '\n' + pwd + '\n')
         this.add(/.*/, '', this.checkLogin)
@@ -123,12 +126,12 @@ export class PTTControler extends PTTStatus {
 
   checkLogin () {
     console.log('checkLogin')
-    if (this.screenHasText(/密碼不對或無此帳號。請檢查大小寫及有無輸入錯誤。|請重新輸入/)) {
+    if (this.pttStatus.screenHasText(/密碼不對或無此帳號。請檢查大小寫及有無輸入錯誤。|請重新輸入/)) {
       this.unlock()
-    } else if (this.screenHasText(/上方為使用者心情點播留言區|【 精華公佈欄 】/)) {
+    } else if (this.pttStatus.screenHasText(/上方為使用者心情點播留言區|【 精華公佈欄 】/)) {
       this.login = true
       this.unlock()
-    } else if (this.screenHasText(/登入中，請稍候\.\.\.|正在更新與同步線上使用者及好友名單，系統負荷量大時會需時較久|密碼正確！ 開始登入系統/)) {
+    } else if (this.pttStatus.screenHasText(/登入中，請稍候\.\.\.|正在更新與同步線上使用者及好友名單，系統負荷量大時會需時較久|密碼正確！ 開始登入系統/)) {
       this.add(/.*/, '', this.checkLogin)
     }
   }
