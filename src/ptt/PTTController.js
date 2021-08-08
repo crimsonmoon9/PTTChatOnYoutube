@@ -1,5 +1,5 @@
-import { PTTStatus } from './PTT.js'
-export class PTTControler {
+import { PTTStatus } from './PTTStatus.js'
+export class PTTController {
   /**
    * @param {PTTStatus} pttStatus 
    */
